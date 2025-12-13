@@ -24,3 +24,6 @@ source .venv/bin/activate
 ```sh
 python -m pip install -r requirements.txt
 ```
+
+# References
+Wong, C. S., & Li, W. K. (2000). On a Mixture Autoregressive Model. Journal of the Royal Statistical Society. Series B (Statistical Methodology), 62(1), 95–115. http://www.jstor.org/stable/2680680

@@ -1,3 +1,4 @@
+import itertools
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
@@ -254,3 +255,38 @@ class OptimizedMAR(GaussianMAR):
         
         print("Max iteration has been reached.")
         return self.params
+
+def grid_search(data:pd.Series, max_components:int, max_ar:int, tol:float=1e6, max_iter:int=200, seed:int=None, quiet:bool=True) -> pd.DataFrame:
+    min_components = 2
+    if max_components < min_components:
+        raise ValueError("Number of components must be at least 2.")
+    
+    results = []
+    for n_components in range(min_components, max_components+1):
+        ar_orders = list(itertools.product(range(max_ar+1), repeat=n_components))
+        
+        for phi_orders in ar_orders:
+            params={
+                'data': data,
+                'n_components': n_components,
+                'phi_orders': phi_orders,
+                'tol': tol,
+                'max_iter': max_iter,
+                'seed': seed,
+                'quiet': quiet
+            }
+            
+            model = OptimizedMAR(**params)
+            model.fit()
+        
+            entry = {
+                "n_components": n_components,
+                "phi_orders": phi_orders,
+                "log_likelihood": model.log_likelihood_vals[-1],
+                "aic": model.aic,
+                "bic": model.bic
+            }
+            
+            results.append(entry)
+    
+    return pd.DataFrame(results)
