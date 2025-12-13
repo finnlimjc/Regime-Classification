@@ -35,13 +35,17 @@ if __name__ == '__main__':
     df['cluster'] = mar.greedy_assignment(mar.tau)
     df.set_index('date', drop=True, inplace=True)
     
+    c = Charts(df, best_params['n_components'], 'cluster')
+    dist_return_fig = c.plot_hist('Distribution of Log Return', 'log_return')
+    st.pyplot(dist_return_fig) #Filter not compatible with densities 
+    plt.close(dist_return_fig)
+    
     selected_cluster = st.radio(
         "Highlight cluster",
         options=["All"] + list(range(best_params['n_components'])),
         horizontal=True,
     )
     
-    c = Charts(df, best_params['n_components'], 'cluster')
     adj_close_fig = c.plot_line_charts(selected_cluster, "Adjusted Close Time Series", 'adj_close')
     st.pyplot(adj_close_fig)
     plt.close(adj_close_fig)
@@ -49,7 +53,3 @@ if __name__ == '__main__':
     log_return_fig = c.plot_line_charts(selected_cluster, "Log Return", 'log_return')
     st.pyplot(log_return_fig)
     plt.close(log_return_fig)
-    
-    dist_return_fig = c.plot_hist('Distribution of Log Return', 'log_return')
-    st.pyplot(dist_return_fig) #Filter not compatible with densities 
-    plt.close(dist_return_fig)
