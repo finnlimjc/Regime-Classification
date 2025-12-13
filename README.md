@@ -25,5 +25,17 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
+4. Run the dashboard:
+```sh
+streamlit run app.py
+```
+
+5. Alternatively, if you have already completed the virtual environment and packages installation, run the appropriate commands as the following example:
+```sh
+cd myproject
+.venv\Scripts\activate
+python -m streamlit run app.py
+```
+
 # References
 Wong, C. S., & Li, W. K. (2000). On a Mixture Autoregressive Model. Journal of the Royal Statistical Society. Series B (Statistical Methodology), 62(1), 95–115. http://www.jstor.org/stable/2680680
