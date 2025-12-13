@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
+from numba import njit
 
 class GaussianMAR:
     def __init__(self, data:pd.Series, n_components:int, phi_orders:list[int], tol:float=1e-6, max_iter:int=200, 
@@ -190,3 +191,66 @@ class GaussianMAR:
             np.log(self.train_n - self.min_timestep) *\
             (3*self.n_components - 1 + np.sum(self.phi_orders))
         return val
+
+@njit
+def e_step(y, alpha, sigma, phi, phi_orders, min_timestep):
+    n = len(y)
+    n_components = len(alpha)
+    tau = np.zeros((n,n_components))
+    epsilon = tau.copy()
+
+    for t in range(min_timestep, n):
+        denom = 0.0 # Sum denominator as we go instead of at the end
+        for k in range(n_components):
+            # Add the AR lags sequentially
+            order = phi_orders[k]
+            ar_y_lags = phi[k][0] #Intercept: phi_0
+            for p in range(order):
+                ar_y_lags += phi[k][p+1] * y[t-1-p]
+            
+            eps = y[t] - ar_y_lags
+            epsilon[t, k] = eps
+            num = (alpha[k]/sigma[k]) * np.exp(-0.5*(eps/sigma[k])**2)
+            tau[t, k] = num
+            denom += num
+        
+        # Normalize to sum to 1
+        for k in range(n_components):
+            tau[t, k] /= denom
+
+    return epsilon, tau #(timesteps, n_components)
+
+class OptimizedMAR(GaussianMAR):
+    def __init__(self, data:pd.Series, n_components:int, phi_orders:list[int], tol:float=1e-6, max_iter:int=200, 
+                alpha:np.ndarray[float]=None, sigma:np.ndarray[float]=None, phi:list[np.ndarray[float]]=None, seed:int=None):
+        super().__init__(data, n_components, phi_orders, tol, max_iter, alpha, sigma, phi, seed)
+    
+    def _maximize_phi(self, y:np.ndarray, tau_k:np.ndarray, phi_order_k:int) -> np.ndarray:
+        W = tau_k[phi_order_k:]
+        Y = y[phi_order_k:]
+        
+        y_lags = [y[phi_order_k-p-1: self.n-p-1] for p in range(phi_order_k)] #(p, n-p)
+        X = np.column_stack([np.ones(self.n-phi_order_k)] + y_lags) #(n-p, p+1)
+        
+        A = X.T @ (X*W.reshape(-1, 1))
+        b = X.T @ (W*Y)
+    
+        return np.linalg.solve(A, b) #More stable than finding the inverse
+    
+    def fit(self) -> dict[np.ndarray[float], np.ndarray[float], list[np.ndarray[float]]]:
+        self.log_likelihood_vals = []
+        curr_log_likelihood = 0
+        for i in range(self.max_iter):
+            epsilon, self.tau = e_step(self.y, phi_orders=self.phi_orders, min_timestep=self.min_timestep, **self.params)
+            
+            old_log_likelihood = curr_log_likelihood
+            curr_log_likelihood = self.log_likelihood(self.params['alpha'], self.params['sigma'], epsilon)
+            self.log_likelihood_vals.append(curr_log_likelihood)
+            if np.abs(curr_log_likelihood - old_log_likelihood) <= self.tol:
+                print("Parameters have converged.")
+                return self.params
+            
+            self.params = self.m_step(tau=self.tau, epsilon=epsilon)
+        
+        print("Max iteration has been reached.")
+        return self.params
