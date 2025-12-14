@@ -40,3 +40,19 @@ class YahooFinance:
         df = self._reset_index(df)
         df.columns = self.col_names
         return df
+
+class VolatilityYF(YahooFinance):
+    def __init__(self, symbol, start_date, end_date, interval = '1d'):
+        super().__init__(symbol, start_date, end_date, interval)
+    
+    def _remove_multi_index(self, target_df:pd.DataFrame) -> pd.DataFrame:
+        df = target_df.copy()
+        df.columns = df.columns.get_level_values(0)
+        return df
+    
+    def pipeline(self) -> pd.DataFrame:
+        prices = self._download_data(**self.params)
+        df = self._remove_multi_index(prices)
+        df['log_return'] = self._pct_change(df)
+        df = self._reset_index(df)
+        return df
