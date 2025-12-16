@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-class LowFrequencyVolatility:
+class VolatilityMeasures:
     def __init__(self, df:pd.DataFrame):
         self.df = df.copy()
     

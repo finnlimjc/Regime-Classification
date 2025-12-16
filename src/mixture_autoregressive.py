@@ -154,6 +154,9 @@ class GaussianMAR:
     
     @property
     def fitted_values(self):
+        if not hasattr(self, "tau"):
+            raise ValueError("Fit the model using .fit() before calling this method.")
+        
         col_names = [str(f"cluster_{k}") for k in range(self.n_components)]
         df = pd.DataFrame(self.tau, columns=col_names)
         return df
@@ -201,12 +204,18 @@ class GaussianMAR:
     
     @property
     def aic(self):
+        if not hasattr(self, "log_likelihood_vals"):
+            raise ValueError("Fit the model using .fit() before calling this method.")
+        
         val = -2*self.log_likelihood_vals[-1] +\
             2*(3*self.n_components - 1 + np.sum(self.phi_orders))
         return val
     
     @property
     def bic(self):
+        if not hasattr(self, "log_likelihood_vals"):
+            raise ValueError("Fit the model using .fit() before calling this method.")
+        
         val = -2*self.log_likelihood_vals[-1] +\
             np.log(self.train_n - self.min_timestep) *\
             (3*self.n_components - 1 + np.sum(self.phi_orders))
