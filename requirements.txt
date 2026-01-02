@@ -1,7 +1,9 @@
+alpaca-py==0.43.2
 matplotlib==3.10.6
 numba==0.63.1
 numpy==2.3.2
 pandas==2.3.2
+python-dotenv==1.1.1
 scikit-learn==1.7.2
 scipy==1.15.3
 seaborn==0.13.2

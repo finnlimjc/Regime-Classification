@@ -1,6 +1,6 @@
 from src.dashboard_design import *
 from src.mixture_autoregressive import *
-from src.yahoo_finance import *
+from src.data_io import *
 
 @st.cache_data
 def get_data(symbol:str, start_date:str, end_date:str) -> pd.DataFrame:

@@ -99,6 +99,7 @@ class RecursiveHAR:
     
     @property
     def mse(self) -> float:
+        """The average squared error between the HAR model and the target volatility measure, not the intraday Realized Volatility."""
         if not hasattr(self, "eval"):
             raise ValueError("Evaluate the model using .backtest() before calling this method.")
         
