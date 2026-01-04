@@ -84,7 +84,7 @@ class GaussianMAR:
         
         return epsilon, tau #(timesteps, n_components)
     
-    def log_likelihood(self, alpha:np.ndarray[float], sigma:np.ndarray[float], epsilon:np.ndarray) -> float:
+    def calc_log_likelihood(self, alpha:np.ndarray[float], sigma:np.ndarray[float], epsilon:np.ndarray) -> float:
         filtered_epsilon = epsilon[self.min_timestep:]
         component_densities = (alpha/sigma)* np.exp(-(filtered_epsilon**2)/ (2*sigma**2))
         mixture_density = np.sum(component_densities, axis=1) #sum columns
@@ -138,16 +138,16 @@ class GaussianMAR:
         self.log_likelihood_vals = []
         curr_log_likelihood = 0
         for i in range(self.max_iter):
-            epsilon, self.tau = self.e_step(self.y, **self.params)
+            self.epsilon, self.tau = self.e_step(self.y, **self.params)
             
             old_log_likelihood = curr_log_likelihood
-            curr_log_likelihood = self.log_likelihood(self.params['alpha'], self.params['sigma'], epsilon)
+            curr_log_likelihood = self.calc_log_likelihood(self.params['alpha'], self.params['sigma'], self.epsilon)
             self.log_likelihood_vals.append(curr_log_likelihood)
             if np.abs(curr_log_likelihood - old_log_likelihood) <= self.tol:
                 print("Parameters have converged.")
                 return self.params
             
-            self.params = self.m_step(tau=self.tau, epsilon=epsilon)
+            self.params = self.m_step(tau=self.tau, epsilon=self.epsilon)
         
         print("Max iteration has been reached.")
         return self.params
@@ -168,10 +168,11 @@ class GaussianMAR:
         labels = labels.where(df.nunique(axis=1) > 1, -1)
         return labels
     
-    def predict(self, y:float|list|np.ndarray|pd.Series, update_history:bool=False) -> np.ndarray:
+    def predict(self, y:float|list|np.ndarray|pd.Series, update_history:bool=False) -> tuple[np.ndarray, np.ndarray]:
         new_y = np.asarray(y).reshape(-1) #1D array
         n = len(new_y)
         tau = np.zeros((n, self.n_components))
+        epsilon = tau.copy()
         
         for t in range(n):
             for k in range(self.n_components):
@@ -184,6 +185,7 @@ class GaussianMAR:
                     y_lags = self.y[-phi_order:]
                     y_lags = np.array([1] + y_lags[::-1].tolist())
                 eps = new_y[t] - p.T @ y_lags
+                epsilon[t, k] = eps
                 
                 alpha = self.params['alpha'][k]
                 sigma = self.params['sigma'][k]
@@ -195,7 +197,7 @@ class GaussianMAR:
         if update_history:
             self.update_history(y)
         
-        return tau
+        return (tau, epsilon)
     
     def update_history(self, y:float|list|np.ndarray|pd.Series):
         new_y = np.asarray(y).reshape(-1)
@@ -203,11 +205,17 @@ class GaussianMAR:
         self.n = len(self.y)
     
     @property
+    def log_likelihood(self):
+        if not hasattr(self, "log_likelihood_vals"):
+            raise ValueError("Fit the model using .fit() before calling this method.")
+        return self.log_likelihood_vals[-1]
+    
+    @property
     def aic(self):
         if not hasattr(self, "log_likelihood_vals"):
             raise ValueError("Fit the model using .fit() before calling this method.")
         
-        val = -2*self.log_likelihood_vals[-1] +\
+        val = -2*self.log_likelihood +\
             2*(3*self.n_components - 1 + np.sum(self.phi_orders))
         return val
     
@@ -216,7 +224,7 @@ class GaussianMAR:
         if not hasattr(self, "log_likelihood_vals"):
             raise ValueError("Fit the model using .fit() before calling this method.")
         
-        val = -2*self.log_likelihood_vals[-1] +\
+        val = -2*self.log_likelihood +\
             np.log(self.train_n - self.min_timestep) *\
             (3*self.n_components - 1 + np.sum(self.phi_orders))
         return val
@@ -274,7 +282,7 @@ class OptimizedMAR(GaussianMAR):
             epsilon, self.tau = e_step(self.y, phi_orders=self.phi_orders, min_timestep=self.min_timestep, **self.params)
             
             old_log_likelihood = curr_log_likelihood
-            curr_log_likelihood = self.log_likelihood(self.params['alpha'], self.params['sigma'], epsilon)
+            curr_log_likelihood = self.calc_log_likelihood(self.params['alpha'], self.params['sigma'], epsilon)
             self.log_likelihood_vals.append(curr_log_likelihood)
             if np.abs(curr_log_likelihood - old_log_likelihood) <= self.tol:
                 if self.quiet is False: print("Parameters have converged.")
