@@ -70,4 +70,3 @@ For more information on the M-step formula, particularly $\hat{\phi}_k$, refer t
 
 # References
 - Wong, C. S., & Li, W. K. (2000). On a Mixture Autoregressive Model. Journal of the Royal Statistical Society. Series B (Statistical Methodology), 62(1), 95–115. http://www.jstor.org/stable/2680680
-- Clements, Adam and Preve, Daniel P. A. and Tee, Clarence, Harvesting the HAR-X Volatility Model (February 20, 2024). Available at SSRN: https://ssrn.com/abstract=4733597 or http://dx.doi.org/10.2139/ssrn.4733597
